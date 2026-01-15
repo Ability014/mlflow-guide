@@ -1,0 +1,166 @@
+# Feature Configuration
+# =====================
+# Versioned feature definitions following enterprise naming conventions
+# Pattern: {domain}_{feature_name}_v{version}
+
+# Metadata
+metadata:
+  domain: "iris"
+  version: "v1"
+  owner: "data-science-team"
+  created_at: "2024-01-15"
+  updated_at: "2024-01-15"
+  status: "validated"  # local | validated | refactored | registered
+
+# Feature Definitions
+features:
+  # ===================
+  # Raw Features (from source)
+  # ===================
+  iris_sepal_length_cm_v1:
+    name: "iris_sepal_length_cm_v1"
+    description: "Sepal length in centimeters"
+    source_column: "sepal_length"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "registered"
+    feature_store_table: "ml_features.iris_features"
+    
+  iris_sepal_width_cm_v1:
+    name: "iris_sepal_width_cm_v1"
+    description: "Sepal width in centimeters"
+    source_column: "sepal_width"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "registered"
+    feature_store_table: "ml_features.iris_features"
+    
+  iris_petal_length_cm_v1:
+    name: "iris_petal_length_cm_v1"
+    description: "Petal length in centimeters"
+    source_column: "petal_length"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "registered"
+    feature_store_table: "ml_features.iris_features"
+    
+  iris_petal_width_cm_v1:
+    name: "iris_petal_width_cm_v1"
+    description: "Petal width in centimeters"
+    source_column: "petal_width"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "registered"
+    feature_store_table: "ml_features.iris_features"
+
+  # ===================
+  # Derived Features
+  # ===================
+  iris_petal_ratio_v1:
+    name: "iris_petal_ratio_v1"
+    description: "Ratio of petal length to petal width"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "validated"
+    derivation:
+      type: "ratio"
+      numerator: "iris_petal_length_cm_v1"
+      denominator: "iris_petal_width_cm_v1"
+      
+  iris_sepal_ratio_v1:
+    name: "iris_sepal_ratio_v1"
+    description: "Ratio of sepal length to sepal width"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "validated"
+    derivation:
+      type: "ratio"
+      numerator: "iris_sepal_length_cm_v1"
+      denominator: "iris_sepal_width_cm_v1"
+      
+  iris_petal_area_v1:
+    name: "iris_petal_area_v1"
+    description: "Approximate petal area (length * width)"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "local"
+    derivation:
+      type: "product"
+      factors:
+        - "iris_petal_length_cm_v1"
+        - "iris_petal_width_cm_v1"
+
+  iris_sepal_area_v1:
+    name: "iris_sepal_area_v1"
+    description: "Approximate sepal area (length * width)"
+    dtype: "float64"
+    domain: "iris"
+    version: 1
+    status: "local"
+    derivation:
+      type: "product"
+      factors:
+        - "iris_sepal_length_cm_v1"
+        - "iris_sepal_width_cm_v1"
+
+# Feature Groups (for model training)
+feature_groups:
+  # Base features only
+  base_v1:
+    version: 1
+    features:
+      - "iris_sepal_length_cm_v1"
+      - "iris_sepal_width_cm_v1"
+      - "iris_petal_length_cm_v1"
+      - "iris_petal_width_cm_v1"
+      
+  # Base + ratio features
+  enhanced_v1:
+    version: 1
+    features:
+      - "iris_sepal_length_cm_v1"
+      - "iris_sepal_width_cm_v1"
+      - "iris_petal_length_cm_v1"
+      - "iris_petal_width_cm_v1"
+      - "iris_petal_ratio_v1"
+      - "iris_sepal_ratio_v1"
+      
+  # All features
+  full_v1:
+    version: 1
+    features:
+      - "iris_sepal_length_cm_v1"
+      - "iris_sepal_width_cm_v1"
+      - "iris_petal_length_cm_v1"
+      - "iris_petal_width_cm_v1"
+      - "iris_petal_ratio_v1"
+      - "iris_sepal_ratio_v1"
+      - "iris_petal_area_v1"
+      - "iris_sepal_area_v1"
+
+# Target Definition
+target:
+  name: "iris_species_encoded_v1"
+  description: "Encoded species label (0=setosa, 1=versicolor, 2=virginica)"
+  source_column: "species_encoded"
+  dtype: "int64"
+  classes:
+    0: "setosa"
+    1: "versicolor"
+    2: "virginica"
+
+# Feature Store Registration
+feature_store:
+  catalog: "${UNITY_CATALOG_NAME:prod_catalog}"
+  schema: "ml_features"
+  table: "iris_features"
+  primary_keys:
+    - "sample_id"
+  timestamp_key: "event_timestamp"

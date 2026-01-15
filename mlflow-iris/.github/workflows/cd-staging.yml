@@ -1,0 +1,73 @@
+# CD Pipeline - Staging
+# =====================
+# Deploys to staging environment after merge to main
+
+name: CD - Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+      
+      - name: Train model
+        run: |
+          python -m src.models.train_model \
+            --experiment /data-science/iris/species_classifier \
+            --version ${{ github.run_number }}.0.0 \
+            --context full \
+            --build-id ${{ github.run_id }} \
+            --local
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          BUILD_ID: ${{ github.run_id }}
+          GIT_SHA: ${{ github.sha }}
+      
+      - name: Register model
+        run: |
+          python scripts/promote_model.py \
+            --stage staging \
+            --build-id ${{ github.run_id }}
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      
+      - name: Deploy to staging endpoint
+        run: |
+          python scripts/deploy_endpoint.py \
+            --environment staging
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      
+      - name: Run smoke tests
+        run: |
+          pytest tests/integration/test_inference.py -v
+        env:
+          ENDPOINT_URL: ${{ secrets.STAGING_ENDPOINT_URL }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

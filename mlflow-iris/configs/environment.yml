@@ -1,0 +1,46 @@
+# Environment Configuration
+# =========================
+# Environment-specific settings (do not commit secrets!)
+
+# Environment identifier
+environment: "${ENVIRONMENT:development}"  # development | staging | production
+
+# Databricks Configuration
+databricks:
+  host: "${DATABRICKS_HOST}"
+  token: "${DATABRICKS_TOKEN}"  # Use secret scope in production
+
+# Unity Catalog
+unity_catalog:
+  name: "${UNITY_CATALOG_NAME:prod_catalog}"
+  default_schema: "ml_models"
+
+# MLflow Configuration
+mlflow:
+  tracking_uri: "${MLFLOW_TRACKING_URI:databricks}"
+  registry_uri: "${MLFLOW_REGISTRY_URI:databricks-uc}"
+  artifact_location: "${MLFLOW_ARTIFACT_LOCATION}"
+
+# Team Configuration
+team:
+  name: "${TEAM_NAME:data-science}"
+  project: "${PROJECT_NAME:iris}"
+  owner: "${OWNER_EMAIL:ml-platform@company.com}"
+
+# Feature Store
+feature_store:
+  enabled: true
+  catalog: "${UNITY_CATALOG_NAME:prod_catalog}"
+  schema: "ml_features"
+
+# Logging
+logging:
+  level: "${LOG_LEVEL:INFO}"
+  
+# CI/CD
+cicd:
+  # Build information (set by CI/CD pipeline)
+  build_id: "${BUILD_ID:local}"
+  git_sha: "${GIT_SHA:unknown}"
+  git_branch: "${GIT_BRANCH:unknown}"
+  pipeline_url: "${PIPELINE_URL:}"

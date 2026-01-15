@@ -1,0 +1,101 @@
+# CD Pipeline - Production
+# ========================
+# Deploys to production after manual approval
+
+name: CD - Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Model version to deploy'
+        required: true
+        type: string
+      approved_by:
+        description: 'Approver email'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  # ============================================
+  # Approval Gate
+  # ============================================
+  approval:
+    name: Production Approval
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Log approval
+        run: |
+          echo "Production deployment approved"
+          echo "Model version: ${{ inputs.model_version }}"
+          echo "Approved by: ${{ inputs.approved_by }}"
+
+  # ============================================
+  # Deploy to Production
+  # ============================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [approval]
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+      
+      - name: Validate staging model
+        run: |
+          python scripts/validate_model.py \
+            --stage staging \
+            --version ${{ inputs.model_version }}
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      
+      - name: Promote to production
+        run: |
+          python scripts/promote_model.py \
+            --stage production \
+            --version ${{ inputs.model_version }} \
+            --approved-by "${{ inputs.approved_by }}"
+        env:
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      
+      - name: Deploy to production endpoint
+        run: |
+          python scripts/deploy_endpoint.py \
+            --environment production \
+            --version ${{ inputs.model_version }}
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      
+      - name: Run production smoke tests
+        run: |
+          pytest tests/integration/test_inference.py -v --production
+        env:
+          ENDPOINT_URL: ${{ secrets.PRODUCTION_ENDPOINT_URL }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      
+      - name: Notify deployment complete
+        run: |
+          echo "Production deployment complete!"
+          echo "Model version: ${{ inputs.model_version }}"
+          echo "Endpoint: ${{ secrets.PRODUCTION_ENDPOINT_URL }}"

@@ -1,0 +1,156 @@
+# Model Configuration
+# ===================
+# Version-controlled hyperparameters and training settings
+
+# Metadata
+metadata:
+  team: "data-science"
+  project: "iris"
+  model_name: "species_classifier"
+  version: "1.0.0"
+  owner: "ml-platform-team"
+  
+# Experiment Settings
+experiment:
+  # Pattern: /{team}/{project}/{model_name}
+  name_template: "/{team}/{project}/{model_name}"
+  
+# Data Configuration  
+data:
+  # Unity Catalog location
+  catalog: "${UNITY_CATALOG_NAME:prod_catalog}"
+  schema: "ml_features"
+  table: "fct_iris"
+  
+  # Split parameters
+  test_size: 0.2
+  validation_size: 0.1
+  random_state: 42
+  stratify: true
+
+# Feature Configuration
+features:
+  # Reference to versioned feature definitions
+  definition_version: "v1"
+  
+  # Feature scaling
+  scaling:
+    enabled: true
+    method: "standard"  # standard | minmax | robust
+  
+  # Derived features
+  derived_features:
+    enabled: true
+
+# Model Configuration
+model:
+  # Model type
+  type: "random_forest"
+  
+  # Hyperparameters by model type
+  hyperparameters:
+    random_forest:
+      n_estimators: 100
+      max_depth: 5
+      min_samples_split: 2
+      min_samples_leaf: 1
+      class_weight: "balanced"
+      random_state: 42
+      
+    logistic_regression:
+      C: 1.0
+      max_iter: 1000
+      solver: "lbfgs"
+      multi_class: "multinomial"
+      class_weight: "balanced"
+      random_state: 42
+      
+    gradient_boosting:
+      n_estimators: 100
+      max_depth: 3
+      learning_rate: 0.1
+      random_state: 42
+
+# Training Configuration
+training:
+  # Training context: full | incremental
+  default_context: "full"
+  
+  # Cross-validation
+  cross_validation:
+    enabled: true
+    n_splits: 5
+    shuffle: true
+  
+  # Early stopping (for iterative models)
+  early_stopping:
+    enabled: false
+    patience: 10
+    min_delta: 0.001
+
+# Evaluation Configuration
+evaluation:
+  # Metrics to compute and log
+  metrics:
+    primary: "macro_f1"
+    secondary:
+      - "accuracy"
+      - "macro_precision"
+      - "macro_recall"
+      - "weighted_f1"
+    per_class:
+      - "f1"
+      - "precision"
+      - "recall"
+  
+  # Thresholds for model validation
+  thresholds:
+    min_accuracy: 0.85
+    min_macro_f1: 0.85
+    max_inference_time_ms: 100
+
+# MLflow Configuration
+mlflow:
+  # Registry settings
+  registry:
+    # Pattern: {catalog}.{schema}.{team}_{project}_{model_name}
+    name_template: "{catalog}.{schema}.{team}_{project}_{model_name}"
+    catalog: "${UNITY_CATALOG_NAME:prod_catalog}"
+    schema: "ml_models"
+  
+  # Tracking settings
+  tracking:
+    log_models: true
+    log_input_examples: true
+    log_signatures: true
+    log_feature_importance: true
+    log_confusion_matrix: true
+    log_classification_report: true
+  
+  # Default tags for all runs
+  default_tags:
+    framework: "sklearn"
+    task_type: "multiclass_classification"
+
+# Deployment Configuration
+deployment:
+  # Serving endpoint settings
+  serving:
+    endpoint_name_template: "{team}-{project}-{model_name}"
+    workload_size: "Small"
+    scale_to_zero_enabled: true
+  
+  # Promotion criteria
+  promotion:
+    staging:
+      require_tests: true
+      min_accuracy: 0.85
+    production:
+      require_approval: true
+      require_staging_validation: true
+      min_accuracy: 0.90
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

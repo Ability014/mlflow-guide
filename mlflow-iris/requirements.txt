@@ -1,0 +1,19 @@
+# Production Dependencies
+# =======================
+
+# Core ML
+scikit-learn>=1.3.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# MLflow
+mlflow>=2.9.0
+
+# Databricks
+databricks-sdk>=0.12.0
+
+# Configuration
+pyyaml>=6.0
+
+# Utilities
+python-dotenv>=1.0.0
