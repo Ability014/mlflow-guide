@@ -11,38 +11,39 @@ import pandas as pd
 import mlflow
 
 
-class TestModelInference:
-    """Tests for model inference."""
+@pytest.fixture
+def logged_model(iris_splits, tmp_path):
+    """Train and log a model for testing."""
+    from src.models.train_model import ModelTrainer
     
-    @pytest.fixture
-    def logged_model(self, iris_splits, tmp_path):
-        """Train and log a model for testing."""
-        from src.models.train_model import ModelTrainer
-        
-        uri = f"sqlite:///{tmp_path}/mlflow.db"
-        mlflow.set_tracking_uri(uri)
-        mlflow.set_experiment("/test/inference")
-        
-        trainer = ModelTrainer(
-            model_type="random_forest",
-            hyperparameters={"n_estimators": 10, "max_depth": 3},
+    uri = f"sqlite:///{tmp_path}/mlflow.db"
+    mlflow.set_tracking_uri(uri)
+    mlflow.set_experiment("/test/inference")
+    
+    trainer = ModelTrainer(
+        model_type="random_forest",
+        hyperparameters={"n_estimators": 10, "max_depth": 3},
+    )
+    
+    with mlflow.start_run():
+        trainer.train(
+            iris_splits["X_train"],
+            iris_splits["X_test"],
+            iris_splits["y_train"],
+            iris_splits["y_test"],
+            feature_names=iris_splits["feature_names"],
         )
         
-        with mlflow.start_run():
-            trainer.train(
-                iris_splits["X_train"],
-                iris_splits["X_test"],
-                iris_splits["y_train"],
-                iris_splits["y_test"],
-                feature_names=iris_splits["feature_names"],
-            )
-            
-            model_info = mlflow.sklearn.log_model(
-                trainer.model,
-                "model",
-            )
-            
-            return model_info.model_uri
+        model_info = mlflow.sklearn.log_model(
+            trainer.model,
+            "model",
+        )
+        
+        return model_info.model_uri
+
+
+class TestModelInference:
+    """Tests for model inference."""
     
     def test_model_loadable(self, logged_model):
         """Model should be loadable outside notebook."""
@@ -117,7 +118,7 @@ class TestModelSignature:
         model_info = mlflow.models.get_model_info(logged_model)
         # Note: signature might be None if not explicitly logged
         # This test documents expected behavior
-        pass
+        assert model_info is not None
     
     def test_model_metadata(self, logged_model):
         """Model should have metadata."""
